@@ -1,88 +1,597 @@
-# Week 1 — Cloud Foundations + IAM (Users, Groups & Policies)
+# Week 1 — Cloud Foundations + IAM Challenge
 
-> Sessions S1–S2 · Jul 4–5, 2026 · SAA-C03 Domain 1 — Design Secure Architectures (30%)
-> Deep dive: study-repo modules `01-AWS-Fundamentals`, `02-IAM`
 
-Welcome to the challenge. This week is your foundation. You'll set up an AWS account safely, get a feel for how the cloud is structured, and learn to control who can do what with IAM. Everything you build over the next nine weeks sits on top of this.
+> **AWS Zero To Hero · CloudAdhar × TrainWithShubham**  
+> Sessions S1–S2 · Jul 4–5, 2026  
+> **SAA-C03 Domain 1 — Design Secure Architectures (30%)**  
+> Primary Pillar: **Security** · Secondary Pillars: **Operational Excellence**, **Cost Optimization**
 
-## Overview
+Welcome to Week 1 of the AWS Zero To Hero challenge. This week is your foundation. Before we build EC2, S3, VPC, databases, or real architectures, we must first understand how AWS is structured, how responsibility is shared, how to secure the account, and how IAM controls access.
 
-By the end of the week you should be able to:
+---
 
-- Explain the AWS Global Infrastructure (Regions, Availability Zones, edge locations) and the Shared Responsibility Model.
-- Set up an AWS account securely — lock down the root user, turn on MFA, and add a billing alarm so a surprise bill can't happen.
-- Create IAM users, groups, and policies, and apply least privilege using JSON policies and permission boundaries.
+## What You Will Learn This Week
 
-## Theory & Concepts
+By the end of Week 1, you should be able to:
 
-**S1 — Cloud Foundations**
-- **Global Infrastructure.** Regions are geographic areas; each contains isolated Availability Zones; edge locations serve content close to users. Almost every question about resilience or latency starts here.
-- **Shared Responsibility Model.** AWS secures the cloud (hardware, global infra); you secure what's *in* the cloud (data, IAM, configuration). The exam often asks "who is responsible for X?"
-- **Account and root user.** The root user can do everything, so you should use it almost never. Leaving it unprotected is the single most common real-world mistake.
+- Explain AWS Global Infrastructure: Regions, Availability Zones, and Edge Locations.
+- Explain the AWS Shared Responsibility Model.
+- Secure your AWS account using root MFA and billing alerts.
+- Understand the difference between root user, IAM user, IAM group, IAM role, and IAM policy.
+- Create IAM users and groups for S3, EC2, and Billing access.
+- Understand managed policies, customer managed policies, and inline policies.
+- Read a basic JSON IAM policy.
+- Apply the principle of least privilege.
+- Understand permission boundaries at a high level.
+- Explain why IAM roles are better than hardcoded access keys for AWS services.
 
-**S2 — IAM Users, Groups & Policies**
-- **Users vs groups.** Attach policies to groups and put users in the groups. It scales cleanly and it's the recommended practice.
-- **IAM policies (JSON).** Built from `Effect`, `Action`, `Resource`, and `Condition`. Reading a policy and predicting "allow or deny?" is a guaranteed exam skill.
-- **Least privilege.** Grant only the permissions actually needed. This is the core idea of Domain 1.
-- **Permission boundaries.** A maximum-permission ceiling for a user or role. People confuse these with SCPs (which come in Week 2), so learn the difference now.
+---
 
-## Hands-on Labs
+## Exam + Pillar Mapping
 
-Do these in your own AWS account, use the Free Tier, and run the cleanup step when you're done.
+| Topic | Exam Mapping | Pillar Mapping | Best Practice |
+|---|---|---|---|
+| AWS account security | D1-30% | Security, Operational Excellence | Protect root user with MFA |
+| Billing alerts | D4-20% | Cost Optimization | Monitor cost early |
+| Shared Responsibility Model | D1-30% | Security | Know what AWS secures vs what you secure |
+| IAM users and groups | D1-30% | Security | Manage permissions using groups |
+| IAM roles | D1-30% | Security, Operational Excellence | Use roles for AWS services |
+| IAM policies | D1-30% | Security | Use least privilege |
+| Permission boundaries | D1-30% | Security | Limit maximum permissions |
 
-**Lab 1 — Secure your account (root hardening + billing alarm)**
+---
 
-The goal is an account you can safely build in for ten weeks.
+# Session 1 — Cloud Foundations
 
-1. Create or log into your AWS account.
-2. Enable MFA on the root user (IAM → Security credentials → MFA).
-3. In Billing → Billing preferences, turn on Free Tier and billing alerts.
-4. In CloudWatch → Alarms, create a billing alarm (for example, alert if estimated charges go over $5) and subscribe your email through SNS. This is also your carry-forward cost thread — see below.
-5. Stop using root. Create an IAM admin user for everyday work and sign in as that from now on.
+## Key Concepts
 
-Deliverable: screenshots of root MFA enabled and the billing alarm in an OK/ALARM state.
+### 1. AWS Global Infrastructure
 
-**Lab 2 — IAM users, groups, and least-privilege policies**
+AWS infrastructure is built using:
 
-The goal is to see policy evaluation with your own eyes.
+- **Regions** — geographic locations where AWS has multiple data centers.
+- **Availability Zones** — isolated data center locations inside a Region.
+- **Edge Locations** — locations used by services like CloudFront to deliver content closer to users.
 
-1. Create a group `Developers` and attach the managed policy `AmazonS3ReadOnlyAccess`.
-2. Create an IAM user `dev-01`, add it to `Developers`, and generate console/CLI access.
-3. As `dev-01`, confirm you can list S3 buckets but cannot delete one (you should get Access Denied).
-4. Write a small custom JSON policy that allows `s3:GetObject` on one specific bucket ARN only, attach it, and test.
-5. Optional: attach a permission boundary to `dev-01` and watch how it caps the effective permissions.
+**Exam pointer:**  
+For high availability, design across multiple Availability Zones. For low latency content delivery, use CloudFront and Edge Locations.
 
-Deliverable: the custom policy JSON in your repo, plus a screenshot of the denied and allowed actions.
+---
 
-**Cleanup**
-- Delete the test users, groups, and custom policies (keep your admin user and the billing alarm).
-- Nothing paid is created this week, but leave the billing alarm on for all ten weeks.
+### 2. Shared Responsibility Model
 
-## Carry-Forward
+AWS security is shared between AWS and the customer.
 
-- **Cost — billing alarm.** You set it in Lab 1. That's the start of your Domain 4 (cost) thread. You'll watch cost implications each week, and in Week 10 you'll add Budgets, Cost Explorer, and Compute Optimizer.
-- **Governance — CloudTrail.** Turn on a CloudTrail trail now so every API call in your account is logged. You'll lean on these logs for auditing and troubleshooting throughout, and revisit governance and observability properly in Week 10.
+- AWS is responsible for **security of the cloud**.
+- Customer is responsible for **security in the cloud**.
 
-## Exam Domain Mapping
+Example:
 
-Domain 1 — Design Secure Architectures (30% of the exam). IAM is the single most-tested topic, so it's worth over-learning early.
+- AWS manages global infrastructure, data centers, hardware, and managed service infrastructure.
+- You manage IAM users, permissions, data, application security, network configuration, and guest OS patching for EC2.
 
-<details><summary>Q1. Where should you attach IAM policies for easiest management at scale?</summary>
+**Simple line:**  
+AWS secures the cloud. You secure what you build in the cloud.
 
-To IAM groups, then place users in the groups. Attaching directly to individual users doesn't scale.
-</details>
+---
 
-<details><summary>Q2. A permission boundary grants <code>s3:*</code> but the user's policy grants only <code>s3:GetObject</code>. What can the user do?</summary>
+### 3. Account and Root User
 
-Only `s3:GetObject`. A permission boundary sets the maximum possible permissions; the effective permission is the intersection of the boundary and the identity policy.
-</details>
+The root user is the account owner identity and has full access to everything in the AWS account.
 
-<details><summary>Q3. Under the Shared Responsibility Model, who patches the guest OS on an EC2 instance?</summary>
+Best practices:
 
-You do. AWS is responsible for the hypervisor and host; the customer manages the guest OS, patches, and applications.
-</details>
+- Enable MFA on root user.
+- Do not use root user for daily work.
+- Create IAM users or roles for regular tasks.
+- Monitor billing from the beginning.
 
-## Learn in Public
+---
+
+# Session 2 — IAM Fundamentals
+
+## Key Concepts
+
+### 1. IAM Users, Groups, Roles, and Policies
+
+IAM controls who can sign in and what actions they can perform.
+
+**Identity + Permissions = Access**
+
+- **IAM User** — named identity for a person or workload that needs AWS access.
+- **IAM Group** — collection of users with common permissions.
+- **IAM Role** — temporary permissions for AWS services or trusted identities.
+- **IAM Policy** — JSON document that defines allowed or denied actions.
+
+---
+
+### 2. IAM Users
+
+An IAM user is used when a person or workload needs AWS access.
+
+Example:
+
+- `learner-s3` user can be given S3 read-only access.
+- `learner-ec2` user can be given EC2 read-only access.
+- `learner-billing` user can be given billing view access.
+
+Important point:
+
+Having login access does not mean having full AWS access. Permissions decide what the user can do.
+
+---
+
+### 3. IAM Groups
+
+IAM groups help manage permissions for multiple users together.
+
+Examples:
+
+- `S3ReadOnlyGroup` → attach `AmazonS3ReadOnlyAccess`
+- `EC2ReadOnlyGroup` → attach `AmazonEC2ReadOnlyAccess`
+- `BillingViewGroup` → attach `AWSBillingReadOnlyAccess`
+
+Best practice:
+
+Attach policies to groups and add users to groups. This is easier to manage than attaching policies to each user individually.
+
+---
+
+### 4. IAM Roles
+
+IAM roles provide temporary credentials. They are commonly used when AWS services need to access other AWS services.
+
+Example:
+
+An EC2 instance needs to read files from S3.
+
+Wrong approach:
+
+- Store access keys on EC2.
+- Put access keys in code or user data.
+
+Correct approach:
+
+- Create an IAM role named `EC2S3ReadOnlyRole`.
+- Attach `AmazonS3ReadOnlyAccess`.
+- Attach the role to the EC2 instance.
+
+Key point:
+
+IAM roles are the recommended approach for AWS services because AWS provides temporary credentials automatically.
+
+---
+
+### 5. IAM Policies
+
+IAM policies define permissions using JSON.
+
+Common policy types:
+
+- **AWS Managed Policy** — created and maintained by AWS. Example: `AmazonS3ReadOnlyAccess`.
+- **Customer Managed Policy** — created by you and reusable across users, groups, and roles.
+- **Inline Policy** — directly embedded into one user, group, or role.
+
+Best practice:
+
+Use customer managed policies when you need reusable custom permissions. Use inline policies only for very specific one-to-one use cases.
+
+---
+
+### 6. JSON Policy Structure
+
+A basic IAM policy includes:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "s3:GetObject",
+      "Resource": "arn:aws:s3:::example-bucket/*"
+    }
+  ]
+}
+```
+
+Meaning:
+
+- `Version` — policy language version.
+- `Statement` — permission block.
+- `Effect` — Allow or Deny.
+- `Action` — AWS API action.
+- `Resource` — AWS resource where action is allowed or denied.
+- `Condition` — optional rules for when policy applies.
+
+---
+
+### 7. Least Privilege
+
+Least privilege means giving only the permissions required to complete the task, nothing extra.
+
+Example:
+
+If a user only needs to view EC2 instances, do not give `AmazonEC2FullAccess`. Give read-only access.
+
+Simple line:
+
+Give enough access to do the work, but not enough access to create damage.
+
+---
+
+### 8. Permission Boundaries
+
+A permission boundary defines the maximum permissions an IAM user or role can have.
+
+Important:
+
+- Permission boundary does not grant permissions by itself.
+- It only limits the maximum possible permissions.
+- Effective permission is the intersection of identity policy and permission boundary.
+
+Example:
+
+If the identity policy allows only `s3:GetObject`, and the permission boundary allows `s3:*`, the user can still only do `s3:GetObject`.
+
+---
+
+# Hands-on Labs
+
+Use your own AWS account. Use the Free Tier carefully. Do not share sensitive account details in screenshots.
+
+---
+
+## Lab 1 — Secure Your AWS Account
+
+Goal: Create a safe AWS account foundation for the next 10 weeks.
+
+Steps:
+
+1. Create or log in to your AWS account.
+2. Enable MFA on the root user.
+3. Open the Billing Dashboard.
+4. Turn on billing alerts / budget alerts.
+5. Create an alert for estimated charges, for example `$5`.
+6. Stop using root user for daily activities.
+
+Deliverables:
+
+- Screenshot of root MFA enabled.
+- Screenshot of billing alert or budget alert.
+- Short note explaining why root user should not be used daily.
+
+Security note:
+
+Do not share root email, account ID, access keys, secret keys, MFA QR code, payment details, or detailed billing information in screenshots.
+
+---
+
+## Lab 2 — S3 Read-Only IAM Group and User
+
+Goal: Understand IAM group-based access.
+
+Create group:
+
+```text
+Group name: S3ReadOnlyGroup
+Policy: AmazonS3ReadOnlyAccess
+```
+
+Create user:
+
+```text
+User name: learner-s3
+Add user to: S3ReadOnlyGroup
+```
+
+Test:
+
+1. Log in as `learner-s3`.
+2. Open S3.
+3. Confirm you can view/list S3 buckets.
+4. Try an action that is not allowed.
+5. Observe `Access Denied`.
+
+Deliverables:
+
+- Screenshot of group created.
+- Screenshot of user added to group.
+- Screenshot of policy attached.
+- Screenshot of allowed S3 view action.
+- Screenshot of denied action.
+
+---
+
+## Lab 3 — EC2 Read-Only Access
+
+Goal: Apply least privilege to EC2.
+
+Create group:
+
+```text
+Group name: EC2ReadOnlyGroup
+Policy: AmazonEC2ReadOnlyAccess
+```
+
+Create user:
+
+```text
+User name: learner-ec2
+Add user to: EC2ReadOnlyGroup
+```
+
+Test:
+
+1. Log in as `learner-ec2`.
+2. Open EC2 dashboard.
+3. Confirm EC2 resources are visible.
+4. Confirm the user cannot create or terminate instances.
+
+Deliverables:
+
+- Screenshot of EC2ReadOnlyGroup.
+- Screenshot of policy attached.
+- Screenshot of EC2 dashboard access.
+- Screenshot or note for denied create/terminate action.
+
+---
+
+## Lab 4 — Billing View Access
+
+Goal: Understand billing access with limited permissions.
+
+Create group:
+
+```text
+Group name: BillingViewGroup
+Policy: AWSBillingReadOnlyAccess
+```
+
+Create user:
+
+```text
+User name: learner-billing
+Add user to: BillingViewGroup
+```
+
+Test:
+
+1. Log in as `learner-billing`.
+2. Open Billing Dashboard.
+3. Verify billing visibility.
+4. Confirm user cannot manage unrelated AWS services.
+
+Deliverables:
+
+- Screenshot of BillingViewGroup.
+- Screenshot of billing policy attached.
+- Screenshot of Billing Dashboard access.
+
+---
+
+## Lab 5 — Custom S3 Read-Only JSON Policy
+
+Goal: Read and create a basic JSON policy.
+
+Create a customer managed policy:
+
+```text
+Policy name: CustomS3ReadOnlyTrainingPolicy
+```
+
+Use this sample policy and replace `YOUR-BUCKET-NAME` with your actual bucket name:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:ListAllMyBuckets",
+        "s3:GetBucketLocation"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:ListBucket"
+      ],
+      "Resource": "arn:aws:s3:::YOUR-BUCKET-NAME"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject"
+      ],
+      "Resource": "arn:aws:s3:::YOUR-BUCKET-NAME/*"
+    }
+  ]
+}
+```
+
+Deliverables:
+
+- Add policy JSON in your repo.
+- Screenshot of custom policy created.
+- Screenshot of allowed action.
+- Screenshot or note for denied action.
+
+---
+
+## Lab 6 — IAM Role for EC2 to Access S3
+
+Goal: Understand why roles are better than access keys for AWS services.
+
+Create role:
+
+```text
+Role name: EC2S3ReadOnlyRole
+Trusted entity: AWS Service
+Use case: EC2
+Policy: AmazonS3ReadOnlyAccess
+```
+
+Key learning:
+
+- EC2 should not use hardcoded access keys.
+- EC2 should access S3 using an IAM role.
+- IAM role gives temporary credentials.
+- This follows AWS security best practice.
+
+Deliverables:
+
+- Screenshot of role created.
+- Screenshot of trusted entity as EC2.
+- Screenshot of attached policy.
+- Short note explaining why role is better than access keys.
+
+---
+
+## Optional Advanced Lab — Switch Role
+
+Goal: Understand role assumption and temporary access.
+
+Create role:
+
+```text
+Role name: TrainingReadOnlyRole
+Policy: ReadOnlyAccess
+```
+
+Create a policy for an IAM user that allows assuming this role:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "sts:AssumeRole",
+      "Resource": "arn:aws:iam::ACCOUNT-ID:role/TrainingReadOnlyRole"
+    }
+  ]
+}
+```
+
+Replace:
+
+```text
+ACCOUNT-ID
+```
+
+with your AWS account ID.
+
+Test:
+
+1. Log in as IAM user.
+2. Use Switch Role in AWS Console.
+3. Switch into `TrainingReadOnlyRole`.
+4. Verify role-based access.
+
+Key learning:
+
+- IAM User = login identity.
+- IAM Role = temporary access.
+- STS = provides temporary credentials.
+- Policy = defines allowed or denied actions.
+
+---
+
+# Repo Submission Format
+
+Create a folder:
+
+```text
+week-01/day-02-iam/YOUR-NAME/
+```
+
+Suggested structure:
+
+```text
+week-01/
+└── day-02-iam/
+    └── your-name/
+        ├── README.md
+        ├── notes.md
+        ├── policies/
+        │   └── custom-s3-readonly-policy.json
+        └── screenshots/
+            ├── root-mfa.png
+            ├── billing-alert.png
+            ├── iam-group.png
+            ├── iam-user.png
+            ├── s3-access.png
+            ├── ec2-readonly.png
+            └── iam-role.png
+```
+
+---
+
+# README Template for Submission
+
+```markdown
+# Week 1 Day 2 — IAM Challenge
+
+## Name
+Your Name
+
+## Topics Practiced
+- AWS account security
+- Root MFA
+- Billing alert
+- IAM users
+- IAM groups
+- IAM roles
+- IAM policies
+- JSON policy
+- Least privilege
+- Permission boundaries
+- EC2 role for S3 access
+
+## What I Learned
+Today I learned how IAM controls access in AWS.
+
+The most important concept I understood is:
+
+> Identity + Permissions = Access
+
+I also learned that root user should not be used for daily work and IAM roles are better for AWS services like EC2 accessing S3.
+
+## Screenshots Added
+- Root MFA
+- Billing alert
+- IAM user
+- IAM group
+- Policy attached
+- S3 access test
+- IAM role
+
+## Custom Policy
+Policy file added:
+
+policies/custom-s3-readonly-policy.json
+
+## Key Takeaway
+Least privilege means giving only the required permissions, nothing extra.
+```
+
+# Cleanup
+
+After completing the lab:
+
+- Delete test IAM users.
+- Delete test IAM groups.
+- Delete custom test policies if not needed.
+- Keep billing alerts enabled.
+- Keep MFA enabled.
+- Keep your main admin IAM user.
+
+---
+
+# Learn in Public
 
 Share a short post this week. Adapt this for LinkedIn, X, or GitHub:
 
@@ -90,21 +599,21 @@ Share a short post this week. Adapt this for LinkedIn, X, or GitHub:
 Week 1 of #10WeeksOfAWS done.
 
 This week I set up my AWS foundation:
-- Secured the account: root MFA and a billing alarm so no surprise bills
-- Created IAM users, groups, and least-privilege JSON policies
-- Got my head around the Shared Responsibility Model and the Global Infrastructure
+- Secured the account with root MFA and billing alert
+- Created IAM users, groups, and least-privilege policies
+- Understood IAM roles and why roles are better than hardcoded access keys
+- Learned the Shared Responsibility Model and AWS Global Infrastructure
 
-The thing that finally clicked: [write one thing you actually understood this week].
+The thing that finally clicked: [write one thing you actually understood this week]
 
-Next up: IAM roles, STS, and Organizations.
-
-#10WeeksOfAWS #CloudAdhar #TrainWithShubham
-@TrainWithShubham @cloudadhar
+#10WeeksOfAWS #AWS10WeekChallenge #CloudAdhar #TrainWithShubham
+@TrainWithShubham @Gangadhar Ure
 ```
 
-Attach a screenshot of your billing alarm or IAM setup, and tag us so we can reshare.
+Attach a screenshot of your billing alarm or IAM setup. Do not include sensitive information.
 
 ---
+
 <div align="center">
 
 [Home](../README.md) · [Week 2 →](../week-02/)
